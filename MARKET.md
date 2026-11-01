@@ -100,23 +100,23 @@
 
 ---
 
-## 六、截图清单（发布前补）
+## 六、截图
 
-| 文件 | 内容 | 建议尺寸 |
+| 文件 | 内容 | 状态 |
 |---|---|---|
-| `screenshot-1.png` | 折叠状态：右侧圆形按钮 + 未完成角标 | 1200×750 |
-| `screenshot-2.png` | 展开状态：列表 + 勾选 + 筛选 | 1200×750 |
-| `screenshot-3.png` | 磨砂滑杆 0% / 50% / 100% 三连对比 | 1200×750 |
+| `docs/screenshot-panel.png` | 展开状态：列表 + 勾选 + 筛选（400×308） | ✅ 已在 README 中使用 |
+| 磨砂 0% / 50% / 100% 对比 | 展示滑杆效果 | 待补 |
 
 ---
 
 ## 七、发布清单
 
 - [x] 包名可用（`dsh-todo-widget` 在 npm 上是空闲的）
-- [x] `package.json` 的 `icon` / `files` / `keywords` 已配
+- [x] `package.json` 的 `icon` / `files` / `keywords` / `repository` / `homepage` 已配
 - [x] 图标 `icon.png`（512×512）+ `icon-128.png`
 - [x] 三套自检全绿（宿主端 / 客户端接缝 / DOM 冒烟）
-- [ ] **`npm publish`** —— 需要你的 npm 账号与 token（我的 shell 断外网，做不了）
-- [ ] 建 GitHub 仓库并回填 `repository` / `homepage`
-- [ ] 截图三张
+- [x] GitHub 仓库 <https://github.com/duoemma/dsh-todo-widget> 已建并推送
+- [x] README 配了效果图
+- [ ] 磨砂 0% / 50% / 100% 对比图
 - [ ] 提交到 awesome-dsh-plugin 注册表
+- [ ] `npm publish`（可选，GitHub 安装已可用）
