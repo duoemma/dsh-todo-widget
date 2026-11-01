@@ -335,10 +335,26 @@ function todoCreateWidget(options) {
   }
   applyPos(pos)
 
+  /**
+   * 把坐标夹进当前视口。
+   * 存下来的位置是按当时的窗口大小算的；如果之后窗口变小（或换了分辨率），
+   * 旧坐标可能落在屏幕外，按钮就"凭空消失"了——所以每次上屏都要夹一次。
+   */
+  function clampPos(p) {
+    var maxLeft = Math.max(4, window.innerWidth - 52)
+    var maxTop = Math.max(4, window.innerHeight - 52)
+    return {
+      left: Math.min(Math.max(4, Number(p.left) || 0), maxLeft),
+      top: Math.min(Math.max(4, Number(p.top) || 0), maxTop),
+    }
+  }
+
   function applyPos(p) {
-    launcher.style.left = Math.round(p.left) + 'px'
-    launcher.style.top = Math.round(p.top) + 'px'
+    var q = clampPos(p)
+    launcher.style.left = Math.round(q.left) + 'px'
+    launcher.style.top = Math.round(q.top) + 'px'
     launcher.style.right = 'auto'
+    return q
   }
 
   var open = false
@@ -422,6 +438,12 @@ function todoCreateWidget(options) {
   })
 
   window.addEventListener('resize', function () {
+    // 窗口变小后旧坐标可能跑到屏幕外，重新夹一次并把结果存回去
+    try {
+      var r = launcher.getBoundingClientRect()
+      var q = applyPos({ left: r.left, top: r.top })
+      todoWritePos(q)
+    } catch (_) {}
     if (open) placeShell()
   })
 

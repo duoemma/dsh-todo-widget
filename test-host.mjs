@@ -22,7 +22,10 @@ const assert = (cond, msg) => {
 assert(typeof mod.apply === 'function', '导出 apply()')
 assert(Array.isArray(mod.inject), '导出 inject[]')
 assert(mod.name === 'dsh-todo-widget', '导出 name')
-assert(mod.inject.includes('webServer'), "inject 声明了 'webServer'（否则 apply 会早于服务就绪，路由注册不上）")
+assert(
+  mod.inject.length === 0,
+  'inject 必须为空：apply 要立刻执行，否则注入行会迟于页面加载而错过（重启后挂件时有时无）',
+)
 
 // 1) 没有任何服务时也不能抛
 let threw = false
@@ -34,11 +37,28 @@ try {
 }
 assert(!threw, 'webServer 缺失时 apply 不抛错')
 
+// 1b) 注入钩子必须**同步**注册，且不依赖 webServer
+let hookRegistered = false
+try {
+  mod.apply({
+    on: (evt) => {
+      if (evt === 'webserver/index-inject') hookRegistered = true
+    },
+    get: () => undefined,
+  })
+} catch (e) {
+  console.error(e)
+}
+assert(hookRegistered, 'apply 一进来就注册 index-inject 钩子（不等任何服务）')
+
 // 2) 有 webServer 时注册 /todo 前缀路由，并返回可用的 disposer
 let registered = null
 let disposeCalled = false
 const ctx = {
   get: (name) => (name === 'webServer' ? { register: (r) => { registered = r; return () => { disposeCalled = true } } } : undefined),
+  // cordis 的局部等待：收到依赖后立刻执行回调即可（真实环境里由框架保证依赖就绪）
+  inject: (deps, cb) => { cb() },
+  on: () => {},
   effect: (fn) => { fn() },
   logger: { info: () => {}, warn: () => {} },
 }

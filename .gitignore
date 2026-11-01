@@ -19,3 +19,4 @@ test/cleanup.json
 .DS_Store
 Thumbs.db
 desktop.ini
+test/*.json
