@@ -1,6 +1,6 @@
 /*! dsh-todo-widget — 自动生成，勿手改。源文件：src/ui.js + src/runtime.js + src/entry.js */
 (function () {
-var TODO_BUILD = "b685d7b128";
+var TODO_BUILD = "3dda537794";
 /* ============================================================================
  * TodoUI — 纯原生 JS 待办面板 UI（普通 DOM 实现，无依赖、无构建）
  *
@@ -1134,6 +1134,17 @@ function todoCreateWidget(options) {
 
   function todoHotSwap(build) {
     try {
+      // 每个页面生命周期只允许换一次：换完之后新实例的构建号应当与服务端一致，
+      // 万一不一致（比如脚本没更新成功），没有这个闸就会每 45 秒自我替换一次，
+      // 旧实例的定时器还活着，越滚越多。
+      if (window.__dshTodoSwapped) return
+      window.__dshTodoSwapped = true
+      if (updateTimer) {
+        try {
+          window.clearInterval(updateTimer)
+        } catch (_) {}
+        updateTimer = null
+      }
       var stale = document.querySelectorAll('.dsh-todo-launcher,.dsh-todo-shell')
       for (var i = 0; i < stale.length; i++) {
         if (stale[i].parentNode) stale[i].parentNode.removeChild(stale[i])

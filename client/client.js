@@ -1134,6 +1134,17 @@ function todoCreateWidget(options) {
 
   function todoHotSwap(build) {
     try {
+      // 每个页面生命周期只允许换一次：换完之后新实例的构建号应当与服务端一致，
+      // 万一不一致（比如脚本没更新成功），没有这个闸就会每 45 秒自我替换一次，
+      // 旧实例的定时器还活着，越滚越多。
+      if (window.__dshTodoSwapped) return
+      window.__dshTodoSwapped = true
+      if (updateTimer) {
+        try {
+          window.clearInterval(updateTimer)
+        } catch (_) {}
+        updateTimer = null
+      }
       var stale = document.querySelectorAll('.dsh-todo-launcher,.dsh-todo-shell')
       for (var i = 0; i < stale.length; i++) {
         if (stale[i].parentNode) stale[i].parentNode.removeChild(stale[i])
