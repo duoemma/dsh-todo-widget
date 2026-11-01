@@ -1,0 +1,21 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建产物里的临时文件（client/ 要提交，它是发布物本身）
+*.log
+*.tmp
+
+# 测试残留
+test/*.png
+test/.edge-profile*/
+test/payload.json
+test/cleanup.json
+*.tgz
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

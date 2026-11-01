@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>todo widget preview</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: #f7f7f8; font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .fake-chat { padding: 28px 32px; max-width: 720px; color: #4b5563; line-height: 1.8; font-size: 14px; }
+  .fake-chat h1 { font-size: 18px; color: #111827; }
+  .fake-bubble { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+</style>
+</head>
+<body>
+<div class="fake-chat">
+  <h1>DSH 界面占位（用于预览待办挂件）</h1>
+  <div class="fake-bubble">这块只用来模拟 DSH 的页面底色与内容，待办挂件是独立浮层。</div>
+  <div class="fake-bubble">预览会验证：悬浮按钮、未完成计数徽标、面板、列表、筛选、拖拽手柄、底部统计。</div>
+</div>
+
+<script>
+  // ---- 1. 模拟 DSH 的客户端模块握手 ----
+  window.__ModuleLoader__ = {
+    load: function (mod) {
+      if (!mod || typeof mod.factory !== 'function') {
+        console.error('bad module payload')
+        return
+      }
+      var exports = mod.factory(function (name) {
+        console.warn('preview: unexpected require(' + name + ')')
+        return {}
+      })
+      window.__todoExports = exports
+    },
+  }
+</script>
+
+<!-- 待办客户端 bundle（构建产物） -->
+<script src="../client/client.js"></script>
+
+<script>
+  // ---- 2. 伪造 /todo/api/state，喂几条样例数据 ----
+  var NOW = Date.now()
+  var FAKE = {
+    filter: 'all',
+    items: [
+      { id: 'a1', text: '把待办挂件接进 DSH', done: true, createdAt: NOW - 300000 },
+      { id: 'a2', text: '写 install-plugin.ps1 并回滚保护', done: true, createdAt: NOW - 200000 },
+      { id: 'a3', text: '给 WorkBuddy 派 UI 任务单', done: false, createdAt: NOW - 100000 },
+      { id: 'a4', text: '验收：悬浮按钮 + 计数徽标 + 拖拽排序', done: false, createdAt: NOW - 50000 },
+      { id: 'a5', text: '补 README 与卸载说明', done: false, createdAt: NOW },
+    ],
+  }
+  window.fetch = function () {
+    return Promise.resolve({
+      ok: true,
+      json: function () {
+        return Promise.resolve(FAKE)
+      },
+    })
+  }
+
+  // ---- 3. 跑插件入口，然后模拟点一下悬浮按钮把面板打开 ----
+  window.addEventListener('load', function () {
+    var exports = window.__todoExports
+    if (!exports || typeof exports.apply !== 'function') {
+      document.title = 'FAIL: apply missing'
+      return
+    }
+    try {
+      exports.apply({ effect: function (fn) { return fn() } })
+    } catch (err) {
+      document.title = 'FAIL: ' + err.message
+      return
+    }
+    setTimeout(function () {
+      var btn = document.querySelector('.dsh-todo-launcher')
+      if (!btn) {
+        document.title = 'FAIL: launcher missing'
+        return
+      }
+      var box = btn.getBoundingClientRect()
+      var x = Math.round(box.left + box.width / 2)
+      var y = Math.round(box.top + box.height / 2)
+      btn.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, pointerId: 1, bubbles: true }))
+      btn.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y, pointerId: 1, bubbles: true }))
+      setTimeout(function () {
+        var shell = document.querySelector('.dsh-todo-shell')
+        document.title = 'OK open=' + (shell && shell.getAttribute('data-open'))
+      }, 120)
+    }, 300)
+  })
+</script>
+</body>
+</html>

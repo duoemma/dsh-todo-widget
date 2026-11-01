@@ -1,0 +1,39 @@
+{
+  "name": "dsh-todo-widget",
+  "version": "0.2.0",
+  "description": "把待办钉在 DSH 边上：右侧悬浮按钮 + 磨砂可调面板，拖拽排序、行内改名、数据只存本机。",
+  "type": "module",
+  "main": "./lib/index.js",
+  "icon": "./icon.png",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "client",
+    "src",
+    "icon.png",
+    "icon-128.png",
+    "cordis.patch.yml",
+    "README.md",
+    "MARKET.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "todo",
+    "task",
+    "widget",
+    "floating",
+    "productivity"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

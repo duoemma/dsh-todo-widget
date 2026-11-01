@@ -1,0 +1,52 @@
+name: publish
+
+# 什么时候发：
+#   1) 推一个 v* 标签（git tag v0.2.0 && git push --tags）
+#   2) 或者在 Actions 页面手动点 Run workflow
+#
+# 需要的仓库 secret（等 npm 能登录了再加一次就行）：
+#   NPM_TOKEN —— npmjs.com 上生成的 Automation 类型 token
+# 没配这个 secret 时，这个 workflow 会在 npm publish 那一步失败，
+# 但 GitHub 分发本身不需要它——用户直接 `dsh plugin add github:你/仓库` 就能装。
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 构建产物与源码是否一致
+        run: |
+          node build.mjs
+          git diff --exit-code client/ || {
+            echo "::error::client/ 与 src/ 不同步，先在本地跑 node build.mjs 再提交"
+            exit 1
+          }
+      - name: DOM 冒烟（真执行一遍 bundle）
+        run: node test/run-bundle-dom.cjs
+      - name: 宿主端自检
+        run: node test-host.mjs
+      - name: 客户端接缝自检
+        run: node test-client.mjs
+
+  npm:
+    needs: verify
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - run: node build.mjs
+      - run: npm publish --access public --registry https://registry.npmjs.org
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

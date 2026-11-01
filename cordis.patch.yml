@@ -1,0 +1,5 @@
+# dsh-todo-widget bundle patch
+# 把待办挂件插进 web profile 的插件名册（bundle 层的 insert 行）。
+- insert:
+    - id: todo-widget
+      name: dsh-todo-widget
