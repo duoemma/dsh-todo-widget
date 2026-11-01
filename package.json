@@ -31,6 +31,14 @@
     "productivity"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/duoemma/dsh-todo-widget.git"
+  },
+  "homepage": "https://github.com/duoemma/dsh-todo-widget#readme",
+  "bugs": {
+    "url": "https://github.com/duoemma/dsh-todo-widget/issues"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
