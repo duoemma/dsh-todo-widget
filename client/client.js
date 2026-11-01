@@ -684,7 +684,13 @@ function todoReadLocal() {
     if (!raw) return null
     var data = JSON.parse(raw)
     if (!data || !Array.isArray(data.items)) return null
-    return { items: data.items, filter: data.filter || 'all', frost: data.frost }
+    return {
+      items: data.items,
+      filter: data.filter || 'all',
+      frost: data.frost,
+      // 本地写入时间，用来和服务端的 updatedAt 比谁更新
+      savedAt: typeof data.savedAt === 'number' ? data.savedAt : 0,
+    }
   } catch (_) {
     return null
   }
@@ -692,7 +698,14 @@ function todoReadLocal() {
 
 function todoWriteLocal(state) {
   try {
-    window.localStorage.setItem(TODO_STORE_KEY, JSON.stringify(state))
+    // 带上写入时间：下次加载要靠它和服务端 updatedAt 比新旧
+    var payload = {
+      items: state.items,
+      filter: state.filter,
+      frost: state.frost,
+      savedAt: Date.now(),
+    }
+    window.localStorage.setItem(TODO_STORE_KEY, JSON.stringify(payload))
   } catch (_) {}
 }
 
@@ -1092,13 +1105,18 @@ function todoCreateWidget(options) {
       .then(function (data) {
         if (disposed || !data || !Array.isArray(data.items)) return
         usingServer = true
-        // 以较新的一份为准：远端有数据就用远端，否则把本地推上去
-        if (data.items.length || !local) {
+        // 以**较新的一份**为准，而不是"服务端有没有数据"。
+        // 只看有没有数据的话，在服务端清空待办后，浏览器 localStorage 里的旧副本
+        // 会把清空结果又盖回去（这个坑真踩过：清掉的两条测试数据自己长回来了）。
+        var serverAt = typeof data.updatedAt === 'number' ? data.updatedAt : 0
+        var localAt = local && typeof local.savedAt === 'number' ? local.savedAt : 0
+        if (serverAt >= localAt) {
           state.items = data.items
           if (data.filter) state.filter = data.filter
           if (typeof data.frost === 'number') state.frost = todoApplyFrost(data.frost)
           emit()
         } else {
+          // 本地比服务端新（比如刚才离线改过），把本地推上去
           persist()
         }
       })
