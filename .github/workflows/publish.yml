@@ -46,7 +46,21 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      - run: node build.mjs
-      - run: npm publish --access public --registry https://registry.npmjs.org
+
+      # 没有配 NPM_TOKEN 时跳过发布，别让 release 挂个红叉
+      # （job 级别的 if 里读不到 secrets，所以用一个前置步骤导出标志）
+      - id: token
+        run: |
+          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "present=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=0" >> "$GITHUB_OUTPUT"
+            echo "::notice::未配置 NPM_TOKEN，跳过 npm 发布。配置后打新 tag 即可自动发布。"
+          fi
+
+      - if: steps.token.outputs.present == '1'
+        run: node build.mjs
+      - if: steps.token.outputs.present == '1'
+        run: npm publish --access public --registry https://registry.npmjs.org
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
