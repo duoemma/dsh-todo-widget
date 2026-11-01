@@ -125,6 +125,8 @@ const head = makeEl('head')
 html.appendChild(head)
 html.appendChild(body)
 
+// 记录 document 上的监听器，方便断言"Esc 到底绑没绑上、绑上了能不能关面板"
+const docListeners = {}
 const document = {
   documentElement: html,
   body,
@@ -133,8 +135,14 @@ const document = {
   createTextNode: (t) => ({ nodeType: 3, textContent: t }),
   querySelector: (s) => (matches(body, s) ? body : findAll(body, s)[0] || null),
   querySelectorAll: (s) => findAll(body, s),
-  addEventListener: () => {},
-  removeEventListener: () => {},
+  addEventListener: (type, fn) => {
+    ;(docListeners[type] = docListeners[type] || []).push(fn)
+  },
+  removeEventListener: (type, fn) => {
+    const list = docListeners[type] || []
+    const i = list.indexOf(fn)
+    if (i >= 0) list.splice(i, 1)
+  },
 }
 
 const store = {}
@@ -186,6 +194,12 @@ try {
   process.exit(1)
 }
 
+// 触发某个元素上注册过的监听器
+function fire(el, type, ev) {
+  const list = (el.listeners && el.listeners[type]) || []
+  for (const fn of list) fn(Object.assign({ preventDefault() {}, stopPropagation() {}, key: '' }, ev))
+}
+
 setTimeout(() => {
   const launchers = findAll(body, '.dsh-todo-launcher')
   const shells = findAll(body, '.dsh-todo-shell')
@@ -198,5 +212,36 @@ setTimeout(() => {
     console.error('❌ 按钮没被创建')
     process.exit(1)
   }
-  console.log('✅ 挂件正常挂载')
+
+  // ---- 功能断言：点开 → Esc 关闭 ----
+  const launcher = launchers[0]
+  const shell = shells[0]
+  let failed = false
+
+  fire(launcher, 'pointerdown', { clientX: 1200, clientY: 300, pointerId: 1 })
+  fire(launcher, 'pointerup', { clientX: 1200, clientY: 300, pointerId: 1 })
+  const openedState = shell.getAttribute('data-open')
+  console.log('点击后 data-open :', openedState)
+  if (openedState !== '1') {
+    console.error('❌ 点击没能展开面板')
+    failed = true
+  }
+
+  const escBindings = docListeners.keydown || []
+  console.log('document keydown :', escBindings.length, '个监听器')
+  if (escBindings.length === 0) {
+    console.error('❌ Esc 没有绑定到 document（焦点不在面板里时会失效）')
+    failed = true
+  } else {
+    for (const fn of escBindings) fn({ key: 'Escape', preventDefault() {}, stopPropagation() {} })
+    const closedState = shell.getAttribute('data-open')
+    console.log('Esc 后 data-open :', closedState)
+    if (closedState !== '0') {
+      console.error('❌ Esc 没能关闭面板')
+      failed = true
+    }
+  }
+
+  if (failed) process.exit(1)
+  console.log('✅ 挂件正常挂载，Esc 关闭生效')
 }, 80)

@@ -149,8 +149,13 @@ function todoSurface(alpha) {
 /**
  * 把磨砂强度（0–100）落到 CSS 变量上。
  *
- * 0   = 不模糊、底衬 62% 不透明（还能看清字，但能看到背后的壁纸）
- * 100 = 模糊 32px、底衬 98% 不透明（几乎实心）
+ * 两个量一起变，而且都留了余量：
+ *   0   = 模糊 0px、底衬 18% 不透明 —— 基本透明，背后看得一清二楚
+ *   50  = 模糊 17px、底衬 53% —— 典型磨砂
+ *   100 = 模糊 34px、底衬 88% —— 厚重磨砂，仍能透出背后的色块
+ *
+ * 为什么底衬封顶 88% 而不是 97%：底衬越不透明，背后的模糊就越看不见。
+ * 之前封顶 0.97，滑杆从 0 拖到 100 画面几乎没变化——模糊被自己的背景盖死了。
  *
  * @param {number} value 0–100
  * @returns {number} 归一化后的值
@@ -160,8 +165,8 @@ function todoApplyFrost(value) {
   if (!isFinite(v)) v = 82
   var t = v / 100
   try {
-    document.body.style.setProperty('--dsh-todo-blur', (t * 32).toFixed(1) + 'px')
-    document.body.style.setProperty('--dsh-todo-surface', todoSurface(0.62 + t * 0.36))
+    document.body.style.setProperty('--dsh-todo-blur', (t * 34).toFixed(1) + 'px')
+    document.body.style.setProperty('--dsh-todo-surface', todoSurface(0.18 + t * 0.7))
   } catch (_) {}
   return v
 }
@@ -450,6 +455,19 @@ function todoCreateWidget(options) {
     }
   })
 
+  // Esc 关闭：必须挂在 document 上。
+  // 挂面板根节点是不行的——焦点不在面板里时（点过聊天输入框、点过空白处），
+  // 按键事件根本不会冒泡到面板，Esc 就"没反应"。
+  // 用冒泡阶段而不是捕获阶段：行内编辑的 Esc 会 stopPropagation 取消编辑，
+  // 那个优先级更高，不能被这里抢掉。
+  var onDocKeydown = function (e) {
+    if (!open) return
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      setOpen(false)
+    }
+  }
+  document.addEventListener('keydown', onDocKeydown)
+
   window.addEventListener('resize', function () {
     // 窗口变小后旧坐标可能跑到屏幕外，重新夹一次并把结果存回去
     try {
@@ -533,11 +551,11 @@ function todoCreateWidget(options) {
 
   function todoHotSwap(build) {
     try {
-      // 每个页面生命周期只允许换一次：换完之后新实例的构建号应当与服务端一致，
-      // 万一不一致（比如脚本没更新成功），没有这个闸就会每 45 秒自我替换一次，
-      // 旧实例的定时器还活着，越滚越多。
-      if (window.__dshTodoSwapped) return
-      window.__dshTodoSwapped = true
+      // 每次热换都要留下一个不能回收的实例，所以必须有上限。
+      // 上限设 5 而不是 1：设 1 的话，改一次代码在同一个页面里就再也换不上了，
+      // 只能重启应用。5 次足够日常迭代，又能挡住"换完发现构建号还是不一致"的循环。
+      window.__dshTodoSwaps = (window.__dshTodoSwaps || 0) + 1
+      if (window.__dshTodoSwaps > 5) return
       if (updateTimer) {
         try {
           window.clearInterval(updateTimer)
@@ -573,6 +591,9 @@ function todoCreateWidget(options) {
       }
       try {
         if (uiResult && typeof uiResult.dispose === 'function') uiResult.dispose()
+      } catch (_) {}
+      try {
+        document.removeEventListener('keydown', onDocKeydown)
       } catch (_) {}
       if (launcher.parentNode) launcher.parentNode.removeChild(launcher)
       if (shell.parentNode) shell.parentNode.removeChild(shell)
